@@ -14,6 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with Tanssi.  If not, see <http://www.gnu.org/licenses/>
 
+use crate::CoreAllocationConfiguration;
+use sp_runtime::Perbill;
 use {
     crate::{
         self as pallet_collator_assignment, pallet::CollatorContainerChain,
@@ -134,6 +136,7 @@ pub struct Mocks {
     pub container_chains: Vec<u32>,
     pub parathreads: Vec<u32>,
     pub random_seed: [u8; 32],
+    pub chains_that_are_tipping: Vec<ParaId>,
     // None means 5
     pub full_rotation_period: Option<u32>,
     pub apply_tip: bool,
@@ -170,6 +173,11 @@ impl pallet_collator_assignment::GetHostConfiguration<u32> for HostConfiguration
     fn collators_per_parathread(_session_index: u32) -> u32 {
         MockData::mock().collators_per_parathread
     }
+
+    fn max_parachain_cores_percentage(_session_index: u32) -> Option<Perbill> {
+        None
+    }
+
     #[cfg(feature = "runtime-benchmarks")]
     fn set_host_configuration(_session_index: u32) {
         MockData::mutate(|mocks| {
@@ -257,7 +265,10 @@ pub struct MockCollatorAssignmentTip;
 
 impl CollatorAssignmentTip<u32> for MockCollatorAssignmentTip {
     fn get_para_tip(para_id: ParaId) -> Option<u32> {
-        if MockData::mock().apply_tip && (para_id == 1003u32.into() || para_id == 1004u32.into()) {
+        if MockData::mock().apply_tip
+            && ((para_id == 1003u32.into() || para_id == 1004u32.into())
+                || MockData::mock().chains_that_are_tipping.contains(&para_id))
+        {
             Some(1_000u32)
         } else {
             None
@@ -282,6 +293,26 @@ impl CollatorAssignmentHook<u32> for MockCollatorAssignmentHook {
     }
 }
 
+pub struct GetCoreAllocationConfigurationImpl;
+
+impl GetCoreAllocationConfigurationImpl {
+    pub(crate) fn set(config: Option<CoreAllocationConfiguration>) {
+        let encoded_data = config.encode();
+        sp_io::storage::set(b"___TEST_CONFIG", &encoded_data);
+    }
+}
+
+impl Get<Option<CoreAllocationConfiguration>> for GetCoreAllocationConfigurationImpl {
+    fn get() -> Option<CoreAllocationConfiguration> {
+        let maybe_data = sp_io::storage::get(b"___TEST_CONFIG");
+        if let Some(data) = maybe_data {
+            Decode::decode(&mut &data[..]).expect("Data must be able to decode")
+        } else {
+            None
+        }
+    }
+}
+
 impl pallet_collator_assignment::Config for Test {
     type RuntimeEvent = RuntimeEvent;
     type SessionIndex = u32;
@@ -297,6 +328,7 @@ impl pallet_collator_assignment::Config for Test {
     type CollatorAssignmentTip = MockCollatorAssignmentTip;
     type ForceEmptyOrchestrator = ConstBool<false>;
     type Currency = ();
+    type CoreAllocationConfiguration = GetCoreAllocationConfigurationImpl;
     type WeightInfo = ();
 }
 

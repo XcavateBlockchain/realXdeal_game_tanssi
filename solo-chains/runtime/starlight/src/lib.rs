@@ -22,7 +22,7 @@
 
 // Fix compile error in impl_runtime_weights! macro
 use runtime_common as polkadot_runtime_common;
-
+use sp_core::Get;
 use {
     authority_discovery_primitives::AuthorityId as AuthorityDiscoveryId,
     beefy_primitives::{
@@ -83,8 +83,8 @@ use {
         prelude::*,
     },
     tp_traits::{
-        apply, derive_storage_traits, GetSessionContainerChains, RemoveParaIdsWithNoCredits, Slot,
-        SlotFrequency,
+        apply, derive_storage_traits, GetHostConfiguration, GetSessionContainerChains,
+        GetSessionIndex, RemoveParaIdsWithNoCredits, Slot, SlotFrequency,
     },
 };
 
@@ -142,6 +142,7 @@ pub mod xcm_config;
 
 // Governance and configurations.
 pub mod governance;
+use pallet_collator_assignment::CoreAllocationConfiguration;
 use {
     governance::{
         pallet_custom_origins, AuctionAdmin, Fellows, GeneralAdmin, Treasurer, TreasurySpender,
@@ -2824,6 +2825,24 @@ impl RemoveParaIdsWithNoCredits for RemoveParaIdsWithNoCreditsImpl {
     }
 }
 
+pub struct GetCoreAllocationConfigurationImpl;
+
+impl Get<Option<CoreAllocationConfiguration>> for GetCoreAllocationConfigurationImpl {
+    fn get() -> Option<CoreAllocationConfiguration> {
+        let system_config = runtime_parachains::configuration::ActiveConfig::<Runtime>::get();
+
+        let session_index = CurrentSessionIndexGetter::session_index();
+        let max_parachain_percentage =
+            CollatorConfiguration::max_parachain_cores_percentage(session_index)
+                .unwrap_or(Perbill::from_percent(50));
+
+        Some(CoreAllocationConfiguration {
+            core_count: system_config.scheduler_params.num_cores,
+            max_parachain_percentage,
+        })
+    }
+}
+
 impl pallet_collator_assignment::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type HostConfiguration = CollatorConfiguration;
@@ -2838,6 +2857,7 @@ impl pallet_collator_assignment::Config for Runtime {
     type CollatorAssignmentTip = ServicesPayment;
     type Currency = Balances;
     type ForceEmptyOrchestrator = ConstBool<true>;
+    type CoreAllocationConfiguration = GetCoreAllocationConfigurationImpl;
     type WeightInfo = ();
 }
 

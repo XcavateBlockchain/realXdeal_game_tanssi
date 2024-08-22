@@ -285,7 +285,13 @@ impl Default for ExtBuilder {
             sudo: Default::default(),
             para_ids: Default::default(),
             config: default_config(),
-            relay_config: Default::default(),
+            relay_config: runtime_parachains::configuration::HostConfiguration {
+                scheduler_params: SchedulerParams {
+                    num_cores: 6,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
             own_para_id: Default::default(),
             next_free_para_id: Default::default(),
             keystore: None,
@@ -331,6 +337,24 @@ impl ExtBuilder {
                 collator_assignment_credits: u32::MAX,
                 parathread_params: None,
             })
+            .collect();
+        self
+    }
+
+    pub fn with_additional_empty_parathreads(mut self, para_ids: Vec<u32>) -> Self {
+        self.para_ids = self
+            .para_ids
+            .iter()
+            .cloned()
+            .chain(para_ids.into_iter().map(|para_id| ParaRegistrationParams {
+                para_id,
+                genesis_data: empty_genesis_data(),
+                block_production_credits: u32::MAX,
+                collator_assignment_credits: u32::MAX,
+                parathread_params: Some(ParathreadParams {
+                    slot_frequency: Default::default(),
+                }),
+            }))
             .collect();
         self
     }
@@ -1043,6 +1067,9 @@ impl<T: runtime_parachains::paras_inherent::Config> ParasInherentTestBuilder<T> 
 }
 
 use frame_support::StorageHasher;
+use primitives::vstaging::SchedulerParams;
+use tp_traits::ParathreadParams;
+
 pub fn storage_map_final_key<H: frame_support::StorageHasher>(
     pallet_prefix: &str,
     map_name: &str,

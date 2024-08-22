@@ -21,6 +21,7 @@
 
 pub mod alias;
 
+use sp_runtime::Perbill;
 pub use {
     alias::*,
     cumulus_primitives_core::{
@@ -227,6 +228,7 @@ pub trait GetHostConfiguration<SessionIndex> {
     fn max_collators_for_orchestrator(session_index: SessionIndex) -> u32;
     fn collators_per_container(session_index: SessionIndex) -> u32;
     fn collators_per_parathread(session_index: SessionIndex) -> u32;
+    fn max_parachain_cores_percentage(session_index: SessionIndex) -> Option<Perbill>;
     #[cfg(feature = "runtime-benchmarks")]
     fn set_host_configuration(_session_index: SessionIndex) {}
 }
