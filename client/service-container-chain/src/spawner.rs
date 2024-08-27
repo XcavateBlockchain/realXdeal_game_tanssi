@@ -131,6 +131,14 @@ pub struct CollationParams {
     pub solochain: bool,
 }
 
+// Idea: make CollationParams an enum or something, and have helper methods to abstract away the
+// differences between solochain and normal chain
+// Probably a bad idea because I want no business logic in this file, so any complex operations will
+// be outside of this file with an `if solochain {` anyway
+pub trait GenericCollationParams {}
+
+impl GenericCollationParams for CollationParams {}
+
 /// Mutable state for container chain spawner. Keeps track of running chains.
 #[derive(Default)]
 pub struct ContainerChainSpawnerState {

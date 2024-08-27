@@ -769,7 +769,8 @@ pub async fn start_solochain_node(
 ) -> sc_service::error::Result<(TaskManager, Arc<ParachainClient>)> {
     let orchestrator_para_id = Default::default();
     let parachain_config = prepare_node_config(orchestrator_config);
-    if let (container_chain_cli, _) = &mut container_chain_config {
+    {
+        let (container_chain_cli, _) = &mut container_chain_config;
         // If the container chain args have no --wasmtime-precompiled flag, use the same as the orchestrator
         if container_chain_cli
             .base
@@ -891,7 +892,8 @@ pub async fn start_solochain_node(
         relay_chain_interface: relay_chain_interface.clone(),
     };
 
-    if let (container_chain_cli, tokio_handle) = container_chain_config {
+    {
+        let (container_chain_cli, tokio_handle) = container_chain_config;
         // If the orchestrator chain is running as a full-node, we start a full node for the
         // container chain immediately, because only collator nodes detect their container chain
         // assignment so otherwise it will never start.

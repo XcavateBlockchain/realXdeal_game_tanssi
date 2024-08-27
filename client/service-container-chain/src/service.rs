@@ -32,7 +32,6 @@ use {
     dp_slot_duration_runtime_api::TanssiSlotDurationApi,
     nimbus_primitives::{NimbusId, NimbusPair},
     node_common::service::{NodeBuilder, NodeBuilderConfig},
-    polkadot_primitives::CollatorPair,
     sc_basic_authorship::ProposerFactory,
     sc_consensus::{BasicQueue, BlockImport},
     sc_executor::WasmExecutor,
@@ -234,14 +233,7 @@ pub async fn start_node_impl_container(
         sync_service: node_builder.network.sync_service.clone(),
     })?;
 
-    if let Some(crate::spawner::CollationParams {
-        collator_key,
-        orchestrator_tx_pool,
-        orchestrator_client,
-        orchestrator_para_id,
-        solochain,
-    }) = collation_params
-    {
+    if let Some(collation_params) = collation_params {
         let node_spawn_handle = node_builder.task_manager.spawn_handle().clone();
         let node_client = node_builder.client.clone();
         let node_backend = node_builder.backend.clone();
@@ -249,8 +241,7 @@ pub async fn start_node_impl_container(
         start_consensus_container(
             node_client.clone(),
             node_backend.clone(),
-            orchestrator_client.clone(),
-            orchestrator_tx_pool.clone(),
+            collation_params,
             block_import.clone(),
             prometheus_registry.clone(),
             node_builder.telemetry.as_ref().map(|t| t.handle()).clone(),
@@ -263,9 +254,6 @@ pub async fn start_node_impl_container(
             force_authoring,
             relay_chain_slot_duration,
             para_id,
-            orchestrator_para_id,
-            solochain,
-            collator_key.clone(),
             overseer_handle.clone(),
             announce_block.clone(),
         );
@@ -312,8 +300,7 @@ fn start_consensus_container(
     client: Arc<ContainerChainClient>,
     backend: Arc<FullBackend>,
     // TODO: this should be generic, so we can use RelayChainInterface for solochain
-    orchestrator_client: Arc<ParachainClient>,
-    orchestrator_tx_pool: Arc<FullPool<Block, ParachainClient>>,
+    collation_params: crate::spawner::CollationParams,
     block_import: ContainerChainBlockImport,
     prometheus_registry: Option<Registry>,
     telemetry: Option<TelemetryHandle>,
@@ -326,12 +313,16 @@ fn start_consensus_container(
     force_authoring: bool,
     relay_chain_slot_duration: Duration,
     para_id: ParaId,
-    orchestrator_para_id: ParaId,
-    solochain: bool,
-    collator_key: CollatorPair,
     overseer_handle: OverseerHandle,
     announce_block: Arc<dyn Fn(Hash, Option<Vec<u8>>) + Send + Sync>,
 ) {
+    let crate::spawner::CollationParams {
+        collator_key,
+        orchestrator_tx_pool,
+        orchestrator_client,
+        orchestrator_para_id,
+        solochain,
+    } = collation_params;
     let slot_duration = if solochain {
         // TODO: always use 6s for aura, not sure why I was getting an error when trying to use
         // cumulus_client_consensus_aura::slot_duration(&*orchestrator_client):
