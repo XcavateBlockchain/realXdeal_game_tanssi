@@ -27,11 +27,10 @@ mod manual_seal;
 #[cfg(test)]
 mod tests;
 
-use cumulus_relay_chain_interface::RelayChainInterface;
-use futures::executor::block_on;
 pub use {
     crate::consensus_orchestrator::OrchestratorAuraWorkerAuxData,
     cumulus_primitives_core::ParaId,
+    cumulus_relay_chain_interface::RelayChainInterface,
     dp_consensus::TanssiAuthorityAssignmentApi,
     manual_seal::{
         get_aura_id_from_seed, ContainerManualSealAuraConsensusDataProvider,
@@ -152,7 +151,7 @@ pub fn first_eligible_key<B: BlockT, C, P>(
     keystore: KeystorePtr,
 ) -> Option<(AuthorityId<P>, ParaId)>
 where
-    C: ProvideRuntimeApi<B> + ?Sized,
+    C: ProvideRuntimeApi<B>,
     C::Api: TanssiAuthorityAssignmentApi<B, AuthorityId<P>>,
     P: Pair + Send + Sync,
     P::Public: AppPublic + Hash + Member + Encode + Decode,
@@ -174,8 +173,6 @@ where
     let runtime_api = client.runtime_api();
 
     // Iterate keys until we find an eligible one, or run out of candidates.
-    // If we are skipping prediction, then we author with the first key we find.
-    // prediction skipping only really makes sense when there is a single key in the keystore.
     available_keys.into_iter().find_map(|type_public_pair| {
         if let Ok(nimbus_id) = NimbusId::from_slice(&type_public_pair) {
             // If we dont find any parachain that we are assigned to, return none
@@ -192,6 +189,8 @@ where
                 None
             }
         } else {
+            log::debug!("Invalid nimbus id: {:?}", type_public_pair);
+
             None
         }
     })
@@ -208,7 +207,7 @@ pub fn first_eligible_key_next_session<B: BlockT, C, P>(
     keystore: KeystorePtr,
 ) -> Option<(AuthorityId<P>, ParaId)>
 where
-    C: ProvideRuntimeApi<B> + ?Sized,
+    C: ProvideRuntimeApi<B>,
     C::Api: TanssiAuthorityAssignmentApi<B, AuthorityId<P>>,
     P: Pair + Send + Sync,
     P::Public: AppPublic + Hash + Member + Encode + Decode,
@@ -230,8 +229,6 @@ where
     let runtime_api = client.runtime_api();
 
     // Iterate keys until we find an eligible one, or run out of candidates.
-    // If we are skipping prediction, then we author with the first key we find.
-    // prediction skipping only really makes sense when there is a single key in the keystore.
     available_keys.into_iter().find_map(|type_public_pair| {
         if let Ok(nimbus_id) = NimbusId::from_slice(&type_public_pair) {
             // If we dont find any parachain that we are assigned to, return none
@@ -248,6 +245,8 @@ where
                 None
             }
         } else {
+            log::debug!("Invalid nimbus id: {:?}", type_public_pair);
+
             None
         }
     })
@@ -258,7 +257,7 @@ where
 /// and makes no guarantees which one as that depends on the keystore's iterator behavior.
 /// This is the standard way of determining which key to author with.
 /// It also returns its ParaId assignment
-pub fn first_eligible_key_solochain<B: BlockT, C, P>(
+pub async fn first_eligible_key_solochain<B: BlockT, C, P>(
     client: &C,
     parent_hash: &H256,
     keystore: KeystorePtr,
@@ -284,26 +283,24 @@ where
     }
 
     // Iterate keys until we find an eligible one, or run out of candidates.
-    // If we are skipping prediction, then we author with the first key we find.
-    // prediction skipping only really makes sense when there is a single key in the keystore.
-    available_keys.into_iter().find_map(|type_public_pair| {
+    for type_public_pair in available_keys {
         if let Ok(nimbus_id) = NimbusId::from_slice(&type_public_pair) {
             // If we dont find any parachain that we are assigned to, return none
             if let Ok(Some(para_id)) =
-                solochain_check_para_id_assignment(client, parent_hash, nimbus_id.clone())
+                solochain_check_para_id_assignment(client, parent_hash, nimbus_id.clone()).await
             {
                 log::debug!("Para id found for assignment {:?}", para_id);
 
-                Some((nimbus_id.into(), para_id))
+                return Some((nimbus_id.into(), para_id));
             } else {
                 log::debug!("No Para id found for assignment {:?}", nimbus_id);
-
-                None
             }
         } else {
-            None
+            log::debug!("Invalid nimbus id: {:?}", type_public_pair);
         }
-    })
+    }
+
+    None
 }
 
 /// Grab the first eligible nimbus key from the keystore
@@ -311,7 +308,7 @@ where
 /// and makes no guarantees which one as that depends on the keystore's iterator behavior.
 /// This is the standard way of determining which key to author with.
 /// It also returns its ParaId assignment
-pub fn first_eligible_key_next_session_solochain<B: BlockT, C, P>(
+pub async fn first_eligible_key_next_session_solochain<B: BlockT, C, P>(
     client: &C,
     parent_hash: &H256,
     keystore: KeystorePtr,
@@ -337,59 +334,63 @@ where
     }
 
     // Iterate keys until we find an eligible one, or run out of candidates.
-    // If we are skipping prediction, then we author with the first key we find.
-    // prediction skipping only really makes sense when there is a single key in the keystore.
-    available_keys.into_iter().find_map(|type_public_pair| {
+    for type_public_pair in available_keys {
         if let Ok(nimbus_id) = NimbusId::from_slice(&type_public_pair) {
             // If we dont find any parachain that we are assigned to, return none
             if let Ok(Some(para_id)) = solochain_check_para_id_assignment_next_session(
                 client,
                 parent_hash,
                 nimbus_id.clone(),
-            ) {
+            )
+            .await
+            {
                 log::debug!("Para id found for assignment {:?}", para_id);
 
-                Some((nimbus_id.into(), para_id))
+                return Some((nimbus_id.into(), para_id));
             } else {
                 log::debug!("No Para id found for assignment {:?}", nimbus_id);
-
-                None
             }
         } else {
-            None
+            log::debug!("Invalid nimbus id: {:?}", type_public_pair);
         }
-    })
+    }
+
+    None
 }
 
-fn solochain_check_para_id_assignment<C: RelayChainInterface + ?Sized>(
+async fn solochain_check_para_id_assignment<C: RelayChainInterface + ?Sized>(
     client: &C,
     relay_parent: &H256,
     nimbus_id: NimbusId,
 ) -> Result<Option<ParaId>, ()> {
     let encoded_nimbus_id = nimbus_id.encode();
-    let res: Vec<u8> = block_on(client.call_remote_runtime_function(
-        "TanssiAuthorityAssignmentApi_check_para_id_assignment",
-        *relay_parent,
-        &encoded_nimbus_id,
-    ))
-    .map_err(|_| ())?;
+    let res: Vec<u8> = client
+        .call_remote_runtime_function(
+            "TanssiAuthorityAssignmentApi_check_para_id_assignment",
+            *relay_parent,
+            &encoded_nimbus_id,
+        )
+        .await
+        .map_err(|_| ())?;
     let res: Option<ParaId> = Decode::decode(&mut res.as_slice()).unwrap();
 
     Ok(res)
 }
 
-fn solochain_check_para_id_assignment_next_session<C: RelayChainInterface + ?Sized>(
+async fn solochain_check_para_id_assignment_next_session<C: RelayChainInterface + ?Sized>(
     client: &C,
     relay_parent: &H256,
     nimbus_id: NimbusId,
 ) -> Result<Option<ParaId>, ()> {
     let encoded_nimbus_id = nimbus_id.encode();
-    let res: Vec<u8> = block_on(client.call_remote_runtime_function(
-        "TanssiAuthorityAssignmentApi_check_para_id_assignment_next_session",
-        *relay_parent,
-        &encoded_nimbus_id,
-    ))
-    .map_err(|_| ())?;
+    let res: Vec<u8> = client
+        .call_remote_runtime_function(
+            "TanssiAuthorityAssignmentApi_check_para_id_assignment_next_session",
+            *relay_parent,
+            &encoded_nimbus_id,
+        )
+        .await
+        .map_err(|_| ())?;
     let res: Option<ParaId> = Decode::decode(&mut res.as_slice()).unwrap();
 
     Ok(res)

@@ -17493,7 +17493,6 @@ dependencies = [
  "flume 0.10.14",
  "fs2",
  "futures 0.3.30",
- "hex-literal 0.3.4",
  "jsonrpsee",
  "log",
  "manual-xcm-rpc",

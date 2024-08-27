@@ -14,8 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Tanssi.  If not, see <http://www.gnu.org/licenses/>
 
-use dp_container_chain_genesis_data::ContainerChainGenesisData;
-use nimbus_primitives::NimbusId;
 use {
     cumulus_client_consensus_common::{
         ParachainBlockImport as TParachainBlockImport, ParachainBlockImportMarker,
@@ -32,7 +30,7 @@ use {
     },
     dc_orchestrator_chain_interface::OrchestratorChainInterface,
     dp_slot_duration_runtime_api::TanssiSlotDurationApi,
-    nimbus_primitives::NimbusPair,
+    nimbus_primitives::{NimbusId, NimbusPair},
     node_common::service::{NodeBuilder, NodeBuilderConfig},
     polkadot_primitives::CollatorPair,
     sc_basic_authorship::ProposerFactory,

@@ -16,7 +16,6 @@
 
 //! Service and ServiceFactory implementation. Specialized wrapper over substrate service.
 
-use parity_scale_codec::Decode;
 use {
     cumulus_client_cli::CollatorOptions,
     cumulus_client_collator::service::CollatorService,
@@ -43,7 +42,7 @@ use {
     node_common::service::{ManualSealConfiguration, NodeBuilder, NodeBuilderConfig, Sealing},
     pallet_author_noting_runtime_api::AuthorNotingApi,
     pallet_registrar_runtime_api::RegistrarApi,
-    parity_scale_codec::Encode,
+    parity_scale_codec::{Decode, Encode},
     polkadot_cli::ProvideRuntimeApi,
     polkadot_parachain_primitives::primitives::HeadData,
     polkadot_service::Handle,
@@ -183,6 +182,7 @@ pub fn build_check_assigned_para_id_solochain(
                 client_set_aside_for_cidp,
                 block_hash,
             )
+            .await
             .unwrap();
         }
     };
@@ -199,7 +199,7 @@ pub fn build_check_assigned_para_id_solochain(
 ///
 /// Checks the assignment for the next block, so if there is a session change on block 15, this will
 /// detect the assignment change after importing block 14.
-fn check_assigned_para_id_solochain(
+async fn check_assigned_para_id_solochain(
     cc_spawn_tx: UnboundedSender<CcSpawnMsg>,
     sync_keystore: KeystorePtr,
     client_set_aside_for_cidp: Arc<dyn RelayChainInterface>,
@@ -212,6 +212,7 @@ fn check_assigned_para_id_solochain(
             &block_hash,
             sync_keystore.clone(),
         )
+        .await
         .map(|(_nimbus_key, para_id)| para_id);
 
     // Check assignment in the next session
@@ -224,6 +225,7 @@ fn check_assigned_para_id_solochain(
         &block_hash,
         sync_keystore,
     )
+    .await
     .map(|(_nimbus_key, para_id)| para_id);
 
     cc_spawn_tx.send(CcSpawnMsg::UpdateAssignment {
