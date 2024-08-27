@@ -34,13 +34,15 @@ use {
         AccountId, RuntimeApi,
     },
     dc_orchestrator_chain_interface::{
-        BlockNumber, ContainerChainGenesisData, OrchestratorChainError, OrchestratorChainInterface,
-        OrchestratorChainResult, PHash, PHeader,
+        BlockNumber, ContainerChainGenesisData, DataPreserverAssignment, DataPreserverProfileId,
+        OrchestratorChainError, OrchestratorChainInterface, OrchestratorChainResult, PHash,
+        PHeader,
     },
     futures::{Stream, StreamExt},
     nimbus_primitives::{NimbusId, NimbusPair},
     node_common::service::{ManualSealConfiguration, NodeBuilder, NodeBuilderConfig, Sealing},
     pallet_author_noting_runtime_api::AuthorNotingApi,
+    //pallet_data_preservers_runtime_api::DataPreserversApi,
     pallet_registrar_runtime_api::RegistrarApi,
     parity_scale_codec::{Decode, Encode},
     polkadot_cli::ProvideRuntimeApi,
@@ -1253,6 +1255,7 @@ where
         + OnDemandBlockProductionApi<Block, ParaId, Slot>
         + RegistrarApi<Block, ParaId>
         + AuthorNotingApi<Block, AccountId, BlockNumber, ParaId>,
+    //+ DataPreserversApi<Block, DataPreserverProfileId, ParaId>,
 {
     async fn get_storage_by_key(
         &self,
@@ -1351,6 +1354,14 @@ where
 
     async fn finalized_block_hash(&self) -> OrchestratorChainResult<PHash> {
         Ok(self.backend.blockchain().info().finalized_hash)
+    }
+
+    async fn data_preserver_active_assignment(
+        &self,
+        _orchestrator_parent: PHash,
+        _profile_id: DataPreserverProfileId,
+    ) -> OrchestratorChainResult<DataPreserverAssignment<ParaId>> {
+        todo!("merge back master")
     }
 }
 
@@ -1499,5 +1510,13 @@ impl OrchestratorChainInterface for OrchestratorChainSolochainInterface {
             .finalized_block_hash()
             .await
             .map_err(|e| OrchestratorChainError::Application(Box::new(e)))
+    }
+
+    async fn data_preserver_active_assignment(
+        &self,
+        _orchestrator_parent: PHash,
+        _profile_id: DataPreserverProfileId,
+    ) -> OrchestratorChainResult<DataPreserverAssignment<ParaId>> {
+        unimplemented!("Data preserver node does not support Starlight yet")
     }
 }
