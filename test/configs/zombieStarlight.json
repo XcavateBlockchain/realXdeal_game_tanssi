@@ -136,6 +136,9 @@
         {
             "id": 2002,
             "chain_spec_path": "specs/single-container-template-container-2002.json",
+            "add_to_genesis": false,
+            "register_para": false,
+            "onboard_as_parachain": false,
             "collators": [
                 {
                     "name": "FullNode-2002",
