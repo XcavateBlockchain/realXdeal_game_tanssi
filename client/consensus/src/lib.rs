@@ -264,7 +264,6 @@ pub async fn first_eligible_key_solochain<B: BlockT, C, P>(
 ) -> Option<(AuthorityId<P>, ParaId)>
 where
     C: RelayChainInterface + ?Sized,
-    //C::Api: TanssiAuthorityAssignmentApi<B, AuthorityId<P>>,
     P: Pair + Send + Sync,
     P::Public: AppPublic + Hash + Member + Encode + Decode,
     P::Signature: TryFrom<Vec<u8>> + Hash + Member + Encode + Decode,
@@ -315,7 +314,6 @@ pub async fn first_eligible_key_next_session_solochain<B: BlockT, C, P>(
 ) -> Option<(AuthorityId<P>, ParaId)>
 where
     C: RelayChainInterface + ?Sized,
-    //C::Api: TanssiAuthorityAssignmentApi<B, AuthorityId<P>>,
     P: Pair + Send + Sync,
     P::Public: AppPublic + Hash + Member + Encode + Decode,
     P::Signature: TryFrom<Vec<u8>> + Hash + Member + Encode + Decode,

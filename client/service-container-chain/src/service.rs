@@ -45,6 +45,7 @@ use {
     sp_api::ProvideRuntimeApi,
     sp_consensus::EnableProofRecording,
     sp_consensus_aura::SlotDuration,
+    sp_core::{Decode, Encode},
     sp_keystore::KeystorePtr,
     std::{sync::Arc, time::Duration},
     substrate_prometheus_endpoint::Registry,
@@ -59,7 +60,6 @@ use {
 
 #[allow(deprecated)]
 use sc_executor::NativeElseWasmExecutor;
-use sp_core::{Decode, Encode};
 
 type FullBackend = TFullBackend<Block>;
 
@@ -549,6 +549,7 @@ fn start_consensus_container(
         cancellation_token: CancellationToken::new(),
         orchestrator_tx_pool,
         orchestrator_client,
+        solochain,
     };
 
     let (fut, _exit_notification_receiver) =

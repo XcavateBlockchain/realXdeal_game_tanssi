@@ -727,6 +727,7 @@ fn start_consensus_orchestrator(
         cancellation_token: cancellation_token.clone(),
         orchestrator_tx_pool,
         orchestrator_client: client,
+        solochain: false,
     };
 
     let (fut, exit_notification_receiver) =
