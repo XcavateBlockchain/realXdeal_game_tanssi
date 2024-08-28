@@ -208,7 +208,7 @@ mod mock_relay_chain_impl {
             unimplemented!("Not needed for test")
         }
 
-        async fn call_remote_runtime_function(
+        async fn call_remote_runtime_function_encoded(
             &self,
             _: &'static str,
             _: PHash,

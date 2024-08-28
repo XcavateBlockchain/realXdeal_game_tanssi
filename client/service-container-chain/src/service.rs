@@ -443,7 +443,7 @@ fn start_consensus_container(
                 if solochain {
                     let encoded_para_id = para_id.encode();
                     let authorities: Vec<u8> = relay_chain_interace_for_orch
-                        .call_remote_runtime_function(
+                        .call_remote_runtime_function_encoded(
                             "TanssiAuthorityAssignmentApi_para_id_authorities",
                             relay_parent,
                             &encoded_para_id,
@@ -467,7 +467,7 @@ fn start_consensus_container(
 
                     let encoded_para_id = para_id.encode();
                     let slot_freq: Vec<u8> = relay_chain_interace_for_orch
-                        .call_remote_runtime_function(
+                        .call_remote_runtime_function_encoded(
                             "OnDemandBlockProductionApi_parathread_slot_frequency",
                             relay_parent,
                             &encoded_para_id,

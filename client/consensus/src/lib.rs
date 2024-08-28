@@ -30,7 +30,7 @@ mod tests;
 pub use {
     crate::consensus_orchestrator::OrchestratorAuraWorkerAuxData,
     cumulus_primitives_core::ParaId,
-    cumulus_relay_chain_interface::RelayChainInterface,
+    cumulus_relay_chain_interface::{RelayChainInterface, call_remote_runtime_function},
     dp_consensus::TanssiAuthorityAssignmentApi,
     manual_seal::{
         get_aura_id_from_seed, ContainerManualSealAuraConsensusDataProvider,
@@ -361,16 +361,14 @@ async fn solochain_check_para_id_assignment<C: RelayChainInterface + ?Sized>(
     relay_parent: &H256,
     nimbus_id: NimbusId,
 ) -> Result<Option<ParaId>, ()> {
-    let encoded_nimbus_id = nimbus_id.encode();
-    let res: Vec<u8> = client
-        .call_remote_runtime_function(
+    let res: Option<ParaId> = call_remote_runtime_function(
+            client,
             "TanssiAuthorityAssignmentApi_check_para_id_assignment",
             *relay_parent,
-            &encoded_nimbus_id,
+            &nimbus_id,
         )
         .await
         .map_err(|_| ())?;
-    let res: Option<ParaId> = Decode::decode(&mut res.as_slice()).unwrap();
 
     Ok(res)
 }
@@ -382,7 +380,7 @@ async fn solochain_check_para_id_assignment_next_session<C: RelayChainInterface 
 ) -> Result<Option<ParaId>, ()> {
     let encoded_nimbus_id = nimbus_id.encode();
     let res: Vec<u8> = client
-        .call_remote_runtime_function(
+        .call_remote_runtime_function_encoded(
             "TanssiAuthorityAssignmentApi_check_para_id_assignment_next_session",
             *relay_parent,
             &encoded_nimbus_id,

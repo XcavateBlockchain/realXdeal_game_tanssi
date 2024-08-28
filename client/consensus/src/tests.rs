@@ -214,7 +214,7 @@ impl RelayChainInterface for RelayChain {
         unimplemented!("Not needed for test")
     }
 
-    async fn call_remote_runtime_function(
+    async fn call_remote_runtime_function_encoded(
         &self,
         _: &'static str,
         _: PHash,

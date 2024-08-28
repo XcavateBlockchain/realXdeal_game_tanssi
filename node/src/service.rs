@@ -1453,7 +1453,7 @@ impl OrchestratorChainInterface for OrchestratorChainSolochainInterface {
         let encoded_para_id = para_id.encode();
         let res: Vec<u8> = self
             .relay_chain_interface
-            .call_remote_runtime_function(
+            .call_remote_runtime_function_encoded(
                 "RegistrarApi_genesis_data",
                 relay_parent,
                 &encoded_para_id,
@@ -1473,7 +1473,7 @@ impl OrchestratorChainInterface for OrchestratorChainSolochainInterface {
         let encoded_para_id = para_id.encode();
         let res: Vec<u8> = self
             .relay_chain_interface
-            .call_remote_runtime_function("RegistrarApi_boot_nodes", relay_parent, &encoded_para_id)
+            .call_remote_runtime_function_encoded("RegistrarApi_boot_nodes", relay_parent, &encoded_para_id)
             .await
             .unwrap();
         let res: Vec<Vec<u8>> = Decode::decode(&mut res.as_slice())?;
@@ -1489,7 +1489,7 @@ impl OrchestratorChainInterface for OrchestratorChainSolochainInterface {
         let encoded_para_id = para_id.encode();
         let res: Vec<u8> = self
             .relay_chain_interface
-            .call_remote_runtime_function(
+            .call_remote_runtime_function_encoded(
                 "AuthorNotingApi_latest_block_number",
                 relay_parent,
                 &encoded_para_id,
