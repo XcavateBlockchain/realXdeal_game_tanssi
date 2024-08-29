@@ -28,7 +28,9 @@ use {
         relay_chain::{well_known_keys as RelayWellKnownKeys, CollatorPair},
         ParaId,
     },
-    cumulus_relay_chain_interface::{OverseerHandle, RelayChainInterface},
+    cumulus_relay_chain_interface::{
+        call_remote_runtime_function, OverseerHandle, RelayChainInterface,
+    },
     dancebox_runtime::{
         opaque::{Block, Hash},
         AccountId, RuntimeApi,
@@ -42,9 +44,8 @@ use {
     nimbus_primitives::{NimbusId, NimbusPair},
     node_common::service::{ManualSealConfiguration, NodeBuilder, NodeBuilderConfig, Sealing},
     pallet_author_noting_runtime_api::AuthorNotingApi,
-    //pallet_data_preservers_runtime_api::DataPreserversApi,
     pallet_registrar_runtime_api::RegistrarApi,
-    parity_scale_codec::{Decode, Encode},
+    parity_scale_codec::Encode,
     polkadot_cli::ProvideRuntimeApi,
     polkadot_parachain_primitives::primitives::HeadData,
     polkadot_service::Handle,
@@ -940,14 +941,15 @@ pub async fn start_solochain_node(
                 },
                 spawn_handle,
                 sync_mode: {
-                    move |db_exists, para_id| {
-                        // TODO: this must use relay chain interface instead
+                    move |_db_exists, _para_id| {
+                        // Default to full sync because it always works
+                        // TODO: allow select_sync_mode_using_client to use orchestrator_chain_interface
                         /*
                         spawner::select_sync_mode_using_client(
                             db_exists,
-                            &orchestrator_client.clone(),
+                            &orchestrator_chain_interface,
                             para_id,
-                        )*/
+                        ).await*/
                         Ok(sc_cli::SyncMode::Full)
                     }
                 },
@@ -1200,7 +1202,7 @@ struct OrchestratorChainSolochainInterfaceBuilder {
     relay_chain_interface: Arc<dyn RelayChainInterface>,
 }
 
-impl crate::service::OrchestratorChainSolochainInterfaceBuilder {
+impl OrchestratorChainSolochainInterfaceBuilder {
     pub fn build(self) -> Arc<dyn OrchestratorChainInterface> {
         Arc::new(OrchestratorChainSolochainInterface::new(
             self.overseer_handle,
@@ -1450,17 +1452,14 @@ impl OrchestratorChainInterface for OrchestratorChainSolochainInterface {
         relay_parent: PHash,
         para_id: ParaId,
     ) -> OrchestratorChainResult<Option<ContainerChainGenesisData>> {
-        let encoded_para_id = para_id.encode();
-        let res: Vec<u8> = self
-            .relay_chain_interface
-            .call_remote_runtime_function_encoded(
-                "RegistrarApi_genesis_data",
-                relay_parent,
-                &encoded_para_id,
-            )
-            .await
-            .unwrap();
-        let res: Option<ContainerChainGenesisData> = Decode::decode(&mut res.as_slice())?;
+        let res: Option<ContainerChainGenesisData> = call_remote_runtime_function(
+            &self.relay_chain_interface,
+            "RegistrarApi_genesis_data",
+            relay_parent,
+            &para_id,
+        )
+        .await
+        .unwrap();
 
         Ok(res)
     }
@@ -1470,13 +1469,14 @@ impl OrchestratorChainInterface for OrchestratorChainSolochainInterface {
         relay_parent: PHash,
         para_id: ParaId,
     ) -> OrchestratorChainResult<Vec<Vec<u8>>> {
-        let encoded_para_id = para_id.encode();
-        let res: Vec<u8> = self
-            .relay_chain_interface
-            .call_remote_runtime_function_encoded("RegistrarApi_boot_nodes", relay_parent, &encoded_para_id)
-            .await
-            .unwrap();
-        let res: Vec<Vec<u8>> = Decode::decode(&mut res.as_slice())?;
+        let res: Vec<Vec<u8>> = call_remote_runtime_function(
+            &self.relay_chain_interface,
+            "RegistrarApi_boot_nodes",
+            relay_parent,
+            &para_id,
+        )
+        .await
+        .unwrap();
 
         Ok(res)
     }
@@ -1486,17 +1486,14 @@ impl OrchestratorChainInterface for OrchestratorChainSolochainInterface {
         relay_parent: PHash,
         para_id: ParaId,
     ) -> OrchestratorChainResult<Option<BlockNumber>> {
-        let encoded_para_id = para_id.encode();
-        let res: Vec<u8> = self
-            .relay_chain_interface
-            .call_remote_runtime_function_encoded(
-                "AuthorNotingApi_latest_block_number",
-                relay_parent,
-                &encoded_para_id,
-            )
-            .await
-            .unwrap();
-        let res: Option<BlockNumber> = Decode::decode(&mut res.as_slice())?;
+        let res: Option<BlockNumber> = call_remote_runtime_function(
+            &self.relay_chain_interface,
+            "AuthorNotingApi_latest_block_number",
+            relay_parent,
+            &para_id,
+        )
+        .await
+        .unwrap();
 
         Ok(res)
     }

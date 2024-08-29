@@ -23,7 +23,9 @@ use {
         StartRelayChainTasksParams,
     },
     cumulus_primitives_core::ParaId,
-    cumulus_relay_chain_interface::{OverseerHandle, RelayChainInterface},
+    cumulus_relay_chain_interface::{
+        call_remote_runtime_function, OverseerHandle, RelayChainInterface,
+    },
     dancebox_runtime::{
         opaque::{Block, Hash},
         RuntimeApi,
@@ -45,7 +47,6 @@ use {
     sp_api::ProvideRuntimeApi,
     sp_consensus::EnableProofRecording,
     sp_consensus_aura::SlotDuration,
-    sp_core::{Decode, Encode},
     sp_keystore::KeystorePtr,
     std::{sync::Arc, time::Duration},
     substrate_prometheus_endpoint::Registry,
@@ -441,17 +442,13 @@ fn start_consensus_container(
 
             async move {
                 if solochain {
-                    let encoded_para_id = para_id.encode();
-                    let authorities: Vec<u8> = relay_chain_interace_for_orch
-                        .call_remote_runtime_function_encoded(
-                            "TanssiAuthorityAssignmentApi_para_id_authorities",
-                            relay_parent,
-                            &encoded_para_id,
-                        )
-                        .await?;
-
-                    let authorities: Option<Vec<NimbusId>> =
-                        Decode::decode(&mut authorities.as_slice()).unwrap();
+                    let authorities: Option<Vec<NimbusId>> = call_remote_runtime_function(
+                        &relay_chain_interace_for_orch,
+                        "TanssiAuthorityAssignmentApi_para_id_authorities",
+                        relay_parent,
+                        &para_id,
+                    )
+                    .await?;
 
                     let authorities = authorities.ok_or_else(|| {
                         Box::<dyn std::error::Error + Send + Sync>::from(
@@ -465,15 +462,13 @@ fn start_consensus_container(
                         relay_parent
                     );
 
-                    let encoded_para_id = para_id.encode();
-                    let slot_freq: Vec<u8> = relay_chain_interace_for_orch
-                        .call_remote_runtime_function_encoded(
-                            "OnDemandBlockProductionApi_parathread_slot_frequency",
-                            relay_parent,
-                            &encoded_para_id,
-                        )
-                        .await?;
-                    let slot_freq: Option<_> = Decode::decode(&mut slot_freq.as_slice()).unwrap();
+                    let slot_freq: Option<_> = call_remote_runtime_function(
+                        &relay_chain_interace_for_orch,
+                        "OnDemandBlockProductionApi_parathread_slot_frequency",
+                        relay_parent,
+                        &para_id,
+                    )
+                    .await?;
 
                     let aux_data = OrchestratorAuraWorkerAuxData {
                         authorities,
