@@ -392,7 +392,6 @@ fn start_consensus_container(
             let client = client_for_cidp.clone();
 
             async move {
-                log::info!("create_inherent_data_providers: solochain? {}", solochain);
                 let authorities_noting_inherent = if solochain {
                     ccp_authorities_noting_inherent::ContainerChainAuthoritiesInherentData::create_at_solochain(
                         relay_parent,
