@@ -270,7 +270,6 @@ std = [
 	"xcm-executor/std",
 	"xcm-runtime-apis/std",
 	"xcm/std",
-	"sp-debug-derive/std"
 ]
 no_std = []
 runtime-benchmarks = [
