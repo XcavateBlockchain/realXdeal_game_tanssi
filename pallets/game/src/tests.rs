@@ -249,6 +249,55 @@ fn submit_answer_works() {
 			"nfdjakl;fueif;janf,dnfm,dhfhfdksks".as_bytes().to_vec().try_into().unwrap()
 		));
 		assert_eq!(GameModule::users::<AccountId>([0; 32].into()).unwrap().points, 155);
+		for x in 4..8 {
+			assert_ok!(GameModule::play_game(
+				RuntimeOrigin::signed([0; 32].into()),
+				crate::DifficultyLevel::Player,
+			));
+			assert_ok!(GameModule::submit_answer(RuntimeOrigin::signed([0; 32].into()), 220_000, x));
+			assert_ok!(GameModule::check_result(
+				RuntimeOrigin::root(),
+				220_000,
+				x,
+				220_000,
+				"nfdjakl;fueif;janf,dnfm,dhfhfdksks".as_bytes().to_vec().try_into().unwrap()
+			));
+		}
+		assert_eq!(GameModule::users::<AccountId>([0; 32].into()).unwrap().nfts.xorange, 5);
+		assert_eq!(GameModule::users::<AccountId>([0; 32].into()).unwrap().points, 835);
+	});
+}
+
+#[test]
+fn submit_answer_works_with_high_difference() {
+	new_test_ext().execute_with(|| {
+		System::set_block_number(1);
+		assert_ok!(GameModule::setup_game(RuntimeOrigin::root()));
+		assert_eq!(GameModule::game_properties().len(), 4);
+		assert_ok!(GameModule::add_to_admins(RuntimeOrigin::root(), [4; 32].into()));
+		assert_ok!(GameModule::register_user(
+			RuntimeOrigin::signed([4; 32].into()),
+			[0; 32].into()
+		));
+		practise_round([0; 32].into(), 0);
+		assert_ok!(GameModule::play_game(
+			RuntimeOrigin::signed([0; 32].into()),
+			crate::DifficultyLevel::Player,
+		));
+		assert_ok!(GameModule::submit_answer(RuntimeOrigin::signed([0; 32].into()), 2_000, 1));
+		System::assert_last_event(
+			Event::AnswerSubmitted { player: [0; 32].into(), game_id: 1, guess: 2_000 }.into(),
+		);
+		assert_ok!(GameModule::check_result(
+			RuntimeOrigin::root(),
+			2_000,
+			1,
+			220_000_000_000,
+			"nfdjakl;fueif;janf,dnfm,dhfhfdksks".as_bytes().to_vec().try_into().unwrap()
+		));
+		System::assert_last_event(Event::ResultChecked { game_id: 1, secret: "nfdjakl;fueif;janf,dnfm,dhfhfdksks".as_bytes().to_vec().try_into().unwrap(), points: 25, won: false, nft_received: false }.into());
+		assert_eq!(GameModule::game_info(0).is_none(), true);
+		assert_eq!(GameModule::users::<AccountId>([0; 32].into()).unwrap().points, 30);
 	});
 }
 
